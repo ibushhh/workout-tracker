@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Plus, Trash2, Copy } from "lucide-react";
 import Modal from "./Modal.jsx";
 
@@ -131,9 +131,19 @@ export default function StrengthExerciseModal({ exercise, initial, weightUnit: d
             ) : (
               <div className="field">
                 <label>Reps for each set</label>
-                <div className="flex gap-8" style={{ flexWrap: "wrap" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(64px, 1fr))", gap: 8 }}>
                   {repsArray.map((r, i) => (
-                    <input key={i} type="number" min="1" style={{ width: 64 }} value={r} onChange={(e) => setRepsArray((arr) => arr.map((x, idx) => (idx === i ? e.target.value : x)))} />
+                    <div key={i} className="flex flex-col gap-8" style={{ alignItems: "center" }}>
+                      <span className="text-faint" style={{ fontSize: 11, fontWeight: 700 }}>SET {i + 1}</span>
+                      <input
+                        className="input-set-value"
+                        type="number"
+                        min="1"
+                        inputMode="numeric"
+                        value={r}
+                        onChange={(e) => setRepsArray((arr) => arr.map((x, idx) => (idx === i ? e.target.value : x)))}
+                      />
+                    </div>
                   ))}
                 </div>
               </div>
@@ -142,20 +152,40 @@ export default function StrengthExerciseModal({ exercise, initial, weightUnit: d
         ) : (
           <div className="field">
             <label>Sets</label>
-            <div className="flex flex-col gap-8">
+            <div style={{ display: "grid", gridTemplateColumns: "22px 1fr 1fr 32px 32px", gap: "8px 10px", alignItems: "center" }}>
+              <span />
+              <span className="text-faint" style={{ fontSize: 11, fontWeight: 700, textAlign: "center" }}>REPS</span>
+              <span className="text-faint" style={{ fontSize: 11, fontWeight: 700, textAlign: "center" }}>WEIGHT</span>
+              <span />
+              <span />
               {advancedSets.map((s, i) => (
-                <div key={i} className="flex items-center gap-8">
-                  <span className="text-faint" style={{ fontSize: 12, width: 18 }}>{i + 1}</span>
-                  <input type="number" min="1" placeholder="Reps" value={s.reps} onChange={(e) => updateAdvancedSet(i, { reps: e.target.value })} style={{ flex: 1 }} />
-                  <input type="number" min="0" step="0.5" placeholder="Weight" value={s.weight} onChange={(e) => updateAdvancedSet(i, { weight: e.target.value })} style={{ flex: 1 }} />
-                  <label className="flex items-center" style={{ flexShrink: 0 }} title="Completed">
+                <Fragment key={i}>
+                  <span className="text-faint" style={{ fontSize: 13, fontWeight: 700, textAlign: "center" }}>{i + 1}</span>
+                  <input
+                    className="input-set-value"
+                    type="number"
+                    min="1"
+                    inputMode="numeric"
+                    value={s.reps}
+                    onChange={(e) => updateAdvancedSet(i, { reps: e.target.value })}
+                  />
+                  <input
+                    className="input-set-value"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    inputMode="decimal"
+                    value={s.weight}
+                    onChange={(e) => updateAdvancedSet(i, { weight: e.target.value })}
+                  />
+                  <label className="flex items-center justify-between" style={{ justifyContent: "center" }} title="Completed">
                     <input type="checkbox" checked={s.completed !== false} onChange={(e) => updateAdvancedSet(i, { completed: e.target.checked })} />
                   </label>
                   <button type="button" className="icon-btn" onClick={() => removeAdvancedSet(i)} disabled={advancedSets.length <= 1}><Trash2 size={15} /></button>
-                </div>
+                </Fragment>
               ))}
             </div>
-            <button type="button" className="btn btn-secondary btn-sm" style={{ marginTop: 10 }} onClick={addAdvancedSet}><Plus size={14} /> Add set</button>
+            <button type="button" className="btn btn-secondary btn-sm" style={{ marginTop: 12 }} onClick={addAdvancedSet}><Plus size={14} /> Add set</button>
           </div>
         )}
 

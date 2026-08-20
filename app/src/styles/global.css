@@ -239,10 +239,22 @@ input, select, textarea {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 10px 12px;
-  font-size: 14px;
+  padding: 12px 14px;
+  /* 16px, not 14px: below 16px iOS Safari auto-zooms the whole page on
+     focus, which makes small inputs (like a single-set reps box) feel
+     tiny and hard to read until you pinch back out. */
+  font-size: 16px;
   color: var(--text);
   width: 100%;
+}
+/* Numeric set-entry inputs (reps/weight while logging) — bigger text and
+   a taller touch target than the rest of the form, since these are the
+   fields read/typed over and over mid-workout. */
+input.input-set-value {
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  padding: 12px 6px;
 }
 input:focus, select:focus, textarea:focus {
   outline: 2px solid var(--accent);

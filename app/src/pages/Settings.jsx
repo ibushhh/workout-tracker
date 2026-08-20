@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Download, Upload, Trash2, Plus, Sun, Moon, Monitor } from "lucide-react";
+import { Download, Upload, Trash2, Plus, Pencil, Sun, Moon, Monitor } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useTheme } from "../context/ThemeContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
@@ -242,6 +242,7 @@ function TemplatesSection() {
   const toast = useToast();
   const [templates, setTemplates] = useState([]);
   const [creating, setCreating] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState(null);
   const [applyTarget, setApplyTarget] = useState(null);
   const [applyDate, setApplyDate] = useState(todayISO());
 
@@ -278,6 +279,7 @@ function TemplatesSection() {
             </div>
             <div className="flex gap-8">
               <button className="btn btn-secondary btn-sm" onClick={() => { setApplyTarget(t); setApplyDate(todayISO()); }}>Apply</button>
+              <button className="icon-btn" onClick={() => setEditingTemplate(t)}><Pencil size={15} /></button>
               <button className="icon-btn" onClick={() => removeTemplate(t.id)}><Trash2 size={15} /></button>
             </div>
           </div>
@@ -285,6 +287,9 @@ function TemplatesSection() {
       )}
 
       {creating && <TemplateModal onClose={() => setCreating(false)} onSaved={() => { setCreating(false); load(); }} />}
+      {editingTemplate && (
+        <TemplateModal template={editingTemplate} onClose={() => setEditingTemplate(null)} onSaved={() => { setEditingTemplate(null); load(); }} />
+      )}
       {applyTarget && (
         <ConfirmDialog
           title={`Apply "${applyTarget.name}"`}
@@ -299,12 +304,14 @@ function TemplatesSection() {
   );
 }
 
-function TemplateModal({ onClose, onSaved }) {
+function TemplateModal({ template, onClose, onSaved }) {
   const toast = useToast();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const [name, setName] = useState(template?.name || "");
+  const [description, setDescription] = useState(template?.description || "");
   const [exercises, setExercises] = useState([]);
-  const [rows, setRows] = useState([]);
+  const [rows, setRows] = useState(
+    template?.exercises.map((e) => ({ exerciseId: e.exerciseId || "", targetSets: e.targetSets ?? 3, targetReps: e.targetReps ?? 8, targetWeightKg: e.targetWeightKg ?? "" })) || []
+  );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -325,12 +332,18 @@ function TemplateModal({ onClose, onSaved }) {
     if (!name.trim()) return setError("Template name is required.");
     setBusy(true);
     try {
-      await api.post("/templates", {
+      const payload = {
         name: name.trim(),
         description: description || null,
         exercises: rows.map((r) => ({ exerciseId: r.exerciseId, targetSets: Number(r.targetSets) || 1, targetReps: Number(r.targetReps) || 8, targetWeightKg: r.targetWeightKg === "" ? null : Number(r.targetWeightKg) })),
-      });
-      toast.success("Template saved.");
+      };
+      if (template) {
+        await api.patch(`/templates/${template.id}`, payload);
+        toast.success("Template updated.");
+      } else {
+        await api.post("/templates", payload);
+        toast.success("Template saved.");
+      }
       onSaved();
     } catch (err) {
       setError(err.message || "Could not save template.");
@@ -340,7 +353,7 @@ function TemplateModal({ onClose, onSaved }) {
 
   return (
     <ConfirmDialog
-      title="New workout template"
+      title={template ? "Edit workout template" : "New workout template"}
       danger={false}
       confirmLabel={busy ? "Saving..." : "Save template"}
       onCancel={onClose}

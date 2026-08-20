@@ -54,6 +54,35 @@ router.post("/", async (req, res) => {
   res.status(201).json({ template: await serializeTemplate(rows[0]) });
 });
 
+router.patch("/:id", async (req, res) => {
+  const { name, description, exercises } = req.body || {};
+  if (!name || !String(name).trim()) return res.status(400).json({ error: "Template name is required." });
+  const { rows: existing } = await pool.query("SELECT id FROM workout_templates WHERE id = $1 AND user_id = $2", [req.params.id, req.user.id]);
+  if (!existing[0]) return res.status(404).json({ error: "Template not found." });
+
+  const { rows } = await pool.query(
+    "UPDATE workout_templates SET name = $1, description = $2, updated_at = now() WHERE id = $3 RETURNING *",
+    [String(name).trim(), description || null, req.params.id]
+  );
+  // Simplest correct way to apply an edited exercise list: replace it
+  // wholesale rather than diffing adds/removes/reorders against the old one.
+  await pool.query("DELETE FROM workout_template_exercises WHERE template_id = $1", [req.params.id]);
+  for (let i = 0; i < (exercises || []).length; i++) {
+    const e = exercises[i];
+    let nameSnapshot = e.exerciseName;
+    if (e.exerciseId) {
+      const { rows: exRows } = await pool.query("SELECT name FROM exercises WHERE id = $1 AND (user_id IS NULL OR user_id = $2)", [e.exerciseId, req.user.id]);
+      if (exRows[0]) nameSnapshot = exRows[0].name;
+    }
+    await pool.query(
+      `INSERT INTO workout_template_exercises (id, template_id, exercise_id, exercise_name_snapshot, order_index, target_sets, target_reps, target_weight_kg, notes)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [uid(), req.params.id, e.exerciseId || null, nameSnapshot || "Exercise", i, e.targetSets || null, e.targetReps || null, e.targetWeightKg || null, e.notes || null]
+    );
+  }
+  res.json({ template: await serializeTemplate(rows[0]) });
+});
+
 router.delete("/:id", async (req, res) => {
   const { rows } = await pool.query("DELETE FROM workout_templates WHERE id = $1 AND user_id = $2 RETURNING id", [req.params.id, req.user.id]);
   if (!rows[0]) return res.status(404).json({ error: "Template not found." });
